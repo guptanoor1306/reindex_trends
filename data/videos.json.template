@@ -1,0 +1,14 @@
+[
+  {
+    "video_id": "unique_id_1",
+    "title_current": "Current Title of Your Video",
+    "transcript_full": "Complete transcript text of the entire video. This should be the full transcript with all spoken content. The system will automatically chunk this into ~1000 character pieces for embedding generation. Make sure this is the complete transcript...",
+    "published_at": "2024-01-15T10:30:00Z"
+  },
+  {
+    "video_id": "unique_id_2",
+    "title_current": "Another Video Title",
+    "transcript_full": "Another complete transcript...",
+    "published_at": "2024-02-20T14:15:00Z"
+  }
+]

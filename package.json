@@ -1,0 +1,35 @@
+{
+  "name": "re-indexer",
+  "version": "1.0.0",
+  "description": "Cost-efficient POC for repackaging YouTube videos against trending topics",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "ingest": "npm run build && node dist/cli.js ingest",
+    "trends": "npm run build && node dist/cli.js trends",
+    "match": "npm run build && node dist/cli.js match",
+    "ui": "npm run build && node -r dotenv/config dist/server.js dotenv_config_path=.env"
+  },
+  "keywords": [
+    "youtube",
+    "trends",
+    "repackaging",
+    "embeddings"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@types/express": "^5.0.6",
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.3.1",
+    "express": "^4.22.1",
+    "openai": "^4.24.1",
+    "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8",
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3"
+  }
+}
