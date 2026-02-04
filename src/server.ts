@@ -396,6 +396,17 @@ async function getCandidateVideos(
   const trendEmbedding = await generateEmbedding(enrichedQuery);
   const allChunks = db.getAllChunks();
   
+  console.log(`🔍 Vector Search Debug:`);
+  console.log(`   - Total videos in DB: ${allVideos.length}`);
+  console.log(`   - Total chunks in DB: ${allChunks.length}`);
+  console.log(`   - Trend query: "${trend.title.substring(0, 80)}..."`);
+  
+  if (allChunks.length === 0) {
+    console.error(`❌ ERROR: No video chunks found in database!`);
+    console.error(`   This means ingestion didn't complete or database is empty.`);
+    return [];
+  }
+  
   const chunkScores: Array<{
     video_id: string;
     chunk_text: string;
@@ -440,7 +451,16 @@ async function getCandidateVideos(
   }
   
   candidates.sort((a, b) => b.avgSimilarity - a.avgSimilarity);
-  return candidates.slice(0, TOP_CANDIDATES_PER_TREND);
+  
+  console.log(`   - Found ${candidates.length} total video candidates`);
+  if (candidates.length > 0) {
+    console.log(`   - Top 3 similarity scores: ${candidates.slice(0, 3).map(c => c.avgSimilarity.toFixed(3)).join(', ')}`);
+  }
+  
+  const topCandidates = candidates.slice(0, TOP_CANDIDATES_PER_TREND);
+  console.log(`   - Returning top ${topCandidates.length} candidates for LLM evaluation`);
+  
+  return topCandidates;
 }
 
 async function evaluateWithLLM(
