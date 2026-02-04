@@ -1,12 +1,22 @@
 import Database from 'better-sqlite3';
 import { Video, VideoChunk, Trend, Recommendation } from './types';
+import * as path from 'path';
+import * as fs from 'fs';
 
-const DB_PATH = './reindexer.db';
+// Use Railway volume path in production, local path in development
+const DB_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || '.';
+const DB_PATH = path.join(DB_DIR, 'reindexer.db');
+
+// Ensure directory exists (for Railway volumes)
+if (DB_DIR !== '.' && !fs.existsSync(DB_DIR)) {
+  fs.mkdirSync(DB_DIR, { recursive: true });
+}
 
 export class DB {
   public db: Database.Database;
 
   constructor() {
+    console.log(`📂 Database path: ${DB_PATH}`);
     this.db = new Database(DB_PATH);
     this.db.pragma('journal_mode = WAL');
     this.initSchema();

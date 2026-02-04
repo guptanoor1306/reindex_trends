@@ -6,6 +6,7 @@ import { fetchTrends, generateTrendId, extractKeywords } from './trends';
 import { generateEmbedding, cosineSimilarity } from './embeddings';
 import { Trend, Video, LLMEvaluation, Recommendation, TrendRecommendations } from './types';
 import { getYouTubeTitleSuggestions } from './youtube';
+import { ingestVideos } from './ingest';
 import OpenAI from 'openai';
 
 dotenv.config();
@@ -79,6 +80,73 @@ app.get('/api/test-youtube', async (req, res) => {
     }
   } catch (error: any) {
     res.json({ success: false, error: error.message });
+  }
+});
+
+// API: Run ingestion (one-time setup for Railway)
+app.post('/api/run-ingestion', async (req, res) => {
+  try {
+    // Simple protection - require a secret key
+    const { secret } = req.body;
+    const expectedSecret = process.env.INGESTION_SECRET || 'ingestion-secret-2026';
+    
+    if (secret !== expectedSecret) {
+      return res.status(403).json({ 
+        success: false, 
+        error: 'Invalid secret. Set INGESTION_SECRET env var or use default.' 
+      });
+    }
+
+    // Check if database already has videos
+    const db = new DB();
+    const existingVideos = db.getAllVideos();
+    db.close();
+
+    if (existingVideos.length > 0) {
+      return res.json({ 
+        success: true, 
+        message: `Database already has ${existingVideos.length} videos. Ingestion not needed.`,
+        videosCount: existingVideos.length
+      });
+    }
+
+    // Run ingestion
+    console.log('🚀 Starting ingestion via API endpoint...');
+    const videoPath = path.join(__dirname, '..', 'data', 'videos.json');
+    
+    // Run ingestion in background and respond immediately
+    res.json({ 
+      success: true, 
+      message: 'Ingestion started. Check server logs for progress. This will take several minutes.',
+      note: 'Refresh /api/check-db to see progress.'
+    });
+
+    // Run ingestion (this will take time)
+    await ingestVideos(videoPath, false);
+    console.log('✅ Ingestion completed via API endpoint');
+
+  } catch (error: any) {
+    console.error('❌ Ingestion error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Check database status
+app.get('/api/check-db', (req, res) => {
+  try {
+    const db = new DB();
+    const videos = db.getAllVideos();
+    const chunks = db.db.prepare('SELECT COUNT(*) as count FROM video_chunks').get() as { count: number };
+    db.close();
+
+    res.json({
+      success: true,
+      videosCount: videos.length,
+      chunksCount: chunks.count,
+      status: videos.length > 0 ? 'ready' : 'empty'
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
