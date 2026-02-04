@@ -10,7 +10,9 @@ import { generateOutput } from './output';
 dotenv.config();
 
 const command = process.argv[2];
-const inputFile = process.argv[3] || './data/videos.json';
+const args = process.argv.slice(3);
+const hasForceFlag = args.includes('--force');
+const inputFile = args.find(arg => !arg.startsWith('--')) || './data/videos.json';
 
 async function main() {
   if (!process.env.OPENAI_API_KEY) {
@@ -23,7 +25,7 @@ async function main() {
 
   switch (command) {
     case 'ingest':
-      await ingestVideos(inputFile);
+      await ingestVideos(inputFile, hasForceFlag);
       break;
 
     case 'trends':
@@ -37,11 +39,13 @@ async function main() {
 
     default:
       console.log('Usage:');
-      console.log('  npm run ingest [path/to/videos.json]  - Ingest videos and generate embeddings');
-      console.log('  npm run trends                         - Fetch trending topics');
-      console.log('  npm run match                          - Match trends to videos and generate output');
+      console.log('  npm run ingest [path/to/videos.json] [--force]  - Ingest videos and generate embeddings');
+      console.log('                                                     (Skips existing videos unless --force is used)');
+      console.log('  npm run trends                                   - Fetch trending topics');
+      console.log('  npm run match                                    - Match trends to videos and generate output');
       console.log('\nExample workflow:');
-      console.log('  npm run ingest');
+      console.log('  npm run ingest              # Only process new videos');
+      console.log('  npm run ingest -- --force   # Reprocess all videos');
       console.log('  npm run trends');
       console.log('  npm run match');
       process.exit(1);

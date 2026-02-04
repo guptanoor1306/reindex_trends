@@ -7,7 +7,7 @@ const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 150;
 const INTRO_WORDS = 200; // First 200 words as intro
 
-export async function ingestVideos(inputPath: string) {
+export async function ingestVideos(inputPath: string, forceReprocess: boolean = false) {
   console.log(`📥 Loading videos from ${inputPath}...`);
   
   const rawData = fs.readFileSync(inputPath, 'utf-8');
@@ -17,7 +17,22 @@ export async function ingestVideos(inputPath: string) {
   
   const db = new DB();
   
+  // Get list of existing video IDs
+  const existingVideos = db.getAllVideos();
+  const existingVideoIds = new Set(existingVideos.map(v => v.video_id));
+  
+  let processedCount = 0;
+  let skippedCount = 0;
+  
   for (const video of videos) {
+    // Skip if video already exists (unless force reprocess)
+    if (!forceReprocess && existingVideoIds.has(video.video_id)) {
+      skippedCount++;
+      console.log(`\n ⏭️  Skipping: ${video.video_id} - ${video.title_current} (already exists)`);
+      continue;
+    }
+    
+    processedCount++;
     console.log(`\n Processing: ${video.video_id} - ${video.title_current}`);
     
     // Extract intro (first 200 words)
@@ -57,7 +72,10 @@ export async function ingestVideos(inputPath: string) {
   }
   
   db.close();
-  console.log(`\n✅ Ingestion complete. ${videos.length} videos processed.`);
+  console.log(`\n✅ Ingestion complete!`);
+  console.log(`   📊 Total videos in file: ${videos.length}`);
+  console.log(`   ✨ Newly processed: ${processedCount}`);
+  console.log(`   ⏭️  Skipped (already exist): ${skippedCount}`);
 }
 
 function chunkText(text: string): string[] {
