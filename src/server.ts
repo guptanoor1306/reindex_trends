@@ -586,18 +586,21 @@ SCORING REQUIREMENTS:
 ACCEPT only if there's a STRONG creative angle that genuinely serves the audience.
 REJECT if connection is forced, weak, or dishonest. Be selective about quality matches.
 
-OUTPUT JSON ONLY. NO EXPLANATION TEXT.
+OUTPUT VALID JSON ONLY. NO EXPLANATION TEXT BEFORE OR AFTER.
+CRITICAL: Properly escape all quotes and special characters in strings.
 
 Required JSON format:
 {
-  "semantic_relevance": 0.0-1.0,
-  "intro_support": 0.0-1.0,
-  "honesty_risk": 0.0-1.0,
-  "allowed": true/false,
+  "semantic_relevance": 0.75,
+  "intro_support": 0.70,
+  "honesty_risk": 0.25,
+  "allowed": true,
   "titles": ["creative title 1 with trend angle", "creative title 2", "creative title 3"],
   "thumbnails": ["thumbnail description 1", "thumbnail description 2"],
-  "notes": "Explain the creative angle and how to frame this video for the trend"
-}`;
+  "notes": "Brief explanation of the creative angle and repackaging strategy"
+}
+
+IMPORTANT: Keep titles and notes concise. Avoid quotes within strings.`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -611,7 +614,37 @@ Required JSON format:
     });
     
     const content = response.choices[0].message.content || '{}';
-    const evaluation = JSON.parse(content) as LLMEvaluation;
+    
+    let evaluation: LLMEvaluation;
+    try {
+      evaluation = JSON.parse(content) as LLMEvaluation;
+    } catch (parseError: any) {
+      console.error('❌ JSON Parse Error:', parseError.message);
+      console.error('   Raw LLM response (first 500 chars):', content.substring(0, 500));
+      
+      // Try to fix common JSON issues
+      let fixedContent = content;
+      
+      // Remove any text before the first {
+      const firstBrace = fixedContent.indexOf('{');
+      if (firstBrace > 0) {
+        fixedContent = fixedContent.substring(firstBrace);
+      }
+      
+      // Remove any text after the last }
+      const lastBrace = fixedContent.lastIndexOf('}');
+      if (lastBrace > 0 && lastBrace < fixedContent.length - 1) {
+        fixedContent = fixedContent.substring(0, lastBrace + 1);
+      }
+      
+      try {
+        evaluation = JSON.parse(fixedContent) as LLMEvaluation;
+        console.log('✅ Successfully parsed JSON after cleanup');
+      } catch (secondError: any) {
+        console.error('❌ Still failed to parse after cleanup:', secondError.message);
+        throw new Error(`JSON parsing failed: ${parseError.message}`);
+      }
+    }
     
     if (typeof evaluation.semantic_relevance !== 'number' ||
         typeof evaluation.intro_support !== 'number' ||
@@ -624,7 +657,11 @@ Required JSON format:
   } catch (error: any) {
     console.error('❌ OpenAI API Error:', error.message || error);
     console.error('   Status:', error.status || 'unknown');
-    console.error('   Check your OPENAI_API_KEY in .env file');
+    if (error.message && error.message.includes('JSON')) {
+      console.error('   This is a JSON parsing error. The LLM generated malformed JSON.');
+    } else {
+      console.error('   Check your OPENAI_API_KEY in .env file');
+    }
     return {
       semantic_relevance: 0,
       intro_support: 0,
