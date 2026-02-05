@@ -335,6 +335,17 @@
         let trends = [];
         let selectedTrendIds = new Set();
         
+        // Format view count properly
+        function formatViews(views) {
+            if (views >= 1000000) {
+                return (views / 1000000).toFixed(1) + 'M';
+            } else if (views >= 1000) {
+                return (views / 1000).toFixed(1) + 'K';
+            } else {
+                return views.toLocaleString();
+            }
+        }
+        
         async function fetchTrends() {
             const btn = document.getElementById('fetchTrendsBtn');
             const status = document.getElementById('fetchStatus');
@@ -617,7 +628,7 @@
                                                 📺 ${yt.channelTitle} • 📅 ${new Date(yt.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                             </div>
                                             <div style="font-size: 0.85em; color: #888;">
-                                                👁️ ${(yt.views / 1000000).toFixed(1)}M views
+                                                👁️ ${formatViews(yt.views)} views
                                             </div>
                                         </div>
                                         
