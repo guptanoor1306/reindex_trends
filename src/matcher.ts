@@ -265,7 +265,37 @@ OUTPUT JSON ONLY:
     });
     
     const content = response.choices[0].message.content || '{}';
-    const evaluation = JSON.parse(content) as LLMEvaluation;
+    
+    let evaluation: LLMEvaluation;
+    try {
+      evaluation = JSON.parse(content) as LLMEvaluation;
+    } catch (parseError: any) {
+      console.error('    ⚠️  JSON Parse Error:', parseError.message);
+      console.error('       Raw LLM response (first 500 chars):', content.substring(0, 500));
+      
+      // Try to fix common JSON issues
+      let fixedContent = content;
+      
+      // Remove any text before the first {
+      const firstBrace = fixedContent.indexOf('{');
+      if (firstBrace > 0) {
+        fixedContent = fixedContent.substring(firstBrace);
+      }
+      
+      // Remove any text after the last }
+      const lastBrace = fixedContent.lastIndexOf('}');
+      if (lastBrace > 0 && lastBrace < fixedContent.length - 1) {
+        fixedContent = fixedContent.substring(0, lastBrace + 1);
+      }
+      
+      try {
+        evaluation = JSON.parse(fixedContent) as LLMEvaluation;
+        console.log('       ✅ Successfully parsed JSON after cleanup');
+      } catch (secondError: any) {
+        console.error('       ❌ Still failed to parse after cleanup:', secondError.message);
+        throw new Error(`JSON parsing failed: ${parseError.message}`);
+      }
+    }
     
     // Validate structure
     if (typeof evaluation.semantic_relevance !== 'number' ||
