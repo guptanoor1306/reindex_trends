@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Re-index Shorts - Video Repackaging POC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .nav-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .nav-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .nav-btn:hover {
+            background: white;
+            color: #667eea;
+        }
+        
+        .nav-btn.active {
+            background: white;
+            color: #667eea;
+        }
+        
+        .section {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section h2 {
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .topic-input {
+            margin-bottom: 15px;
+        }
+        
+        .topic-input input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        
+        .topic-input input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .topic-results {
+            margin-bottom: 40px;
+            padding: 25px;
+            background: linear-gradient(135deg, #FF000015 0%, #FF000025 100%);
+            border-radius: 12px;
+            border: 2px solid #FF0000;
+            box-shadow: 0 4px 12px rgba(255,0,0,0.15);
+        }
+        
+        .topic-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #FF0000;
+        }
+        
+        .topic-title {
+            color: #FF0000;
+            font-size: 1.5em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .video-item {
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border-left: 4px solid #FF0000;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            margin-bottom: 15px;
+        }
+        
+        .video-content {
+            display: flex;
+            align-items: start;
+            gap: 15px;
+        }
+        
+        .video-thumbnail {
+            width: 180px;
+            height: 101px;
+            object-fit: cover;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+        
+        .video-details {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .video-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+            font-size: 0.95em;
+            line-height: 1.4;
+        }
+        
+        .video-meta {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .video-stats {
+            font-size: 0.85em;
+            color: #888;
+        }
+        
+        .watch-btn {
+            padding: 6px 12px;
+            background: #f0f0f0;
+            color: #666;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.8em;
+            white-space: nowrap;
+            border: 1px solid #ddd;
+            align-self: center;
+            display: inline-block;
+        }
+        
+        .watch-btn:hover {
+            background: #FF0000;
+            color: white;
+            border-color: #FF0000;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 re-indexer</h1>
+            <p class="subtitle">AI-Powered Video Repackaging for Trending Topics</p>
+            <div class="nav-buttons">
+                <a href="/" class="nav-btn">📈 News Trends</a>
+                <a href="/shorts.html" class="nav-btn active">🎯 Re-index Shorts</a>
+            </div>
+        </header>
+        
+        <!-- Topic Input Section -->
+        <div class="section">
+            <h2>🎯 Find Top YouTube Titles by Topic</h2>
+            <p style="margin-bottom: 20px; color: #666;">Enter 4-5 topics or keywords to discover the top 20 YouTube titles from the last 7 days, sorted by views.</p>
+            
+            <div id="topicInputs">
+                <div class="topic-input">
+                    <input type="text" placeholder="Topic 1: e.g., Budget 2026" data-topic-index="0">
+                </div>
+                <div class="topic-input">
+                    <input type="text" placeholder="Topic 2: e.g., AI Layoffs" data-topic-index="1">
+                </div>
+                <div class="topic-input">
+                    <input type="text" placeholder="Topic 3: e.g., Stock Market Crash" data-topic-index="2">
+                </div>
+                <div class="topic-input">
+                    <input type="text" placeholder="Topic 4 (optional)" data-topic-index="3">
+                </div>
+                <div class="topic-input">
+                    <input type="text" placeholder="Topic 5 (optional)" data-topic-index="4">
+                </div>
+            </div>
+            
+            <button id="findTitlesBtn" onclick="findTitles()">🔍 Find Top Titles</button>
+            <div id="findStatus"></div>
+        </div>
+        
+        <!-- Results Section -->
+        <div id="resultsSection" style="display: none;">
+            <div id="resultsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        function formatViews(views) {
+            if (views >= 1000000) {
+                return (views / 1000000).toFixed(1) + 'M';
+            } else if (views >= 1000) {
+                return (views / 1000).toFixed(1) + 'K';
+            } else {
+                return views.toLocaleString();
+            }
+        }
+        
+        async function findTitles() {
+            const inputs = document.querySelectorAll('#topicInputs input');
+            const topics = [];
+            
+            inputs.forEach(input => {
+                const value = input.value.trim();
+                if (value) {
+                    topics.push(value);
+                }
+            });
+            
+            if (topics.length === 0) {
+                alert('Please enter at least one topic');
+                return;
+            }
+            
+            const btn = document.getElementById('findTitlesBtn');
+            const status = document.getElementById('findStatus');
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContainer = document.getElementById('resultsContainer');
+            
+            btn.disabled = true;
+            status.innerHTML = '<div class="loading"><div class="spinner"></div><p>Searching YouTube for top titles...</p></div>';
+            resultsSection.style.display = 'none';
+            resultsContainer.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/find-titles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topics })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    status.innerHTML = '';
+                    resultsSection.style.display = 'block';
+                    displayResults(data.results);
+                } else {
+                    status.innerHTML = '<p style="color: red; margin-top: 15px;">❌ Error: ' + data.error + '</p>';
+                }
+            } catch (error) {
+                status.innerHTML = '<p style="color: red; margin-top: 15px;">❌ Error: ' + error.message + '</p>';
+            }
+            
+            btn.disabled = false;
+        }
+        
+        function displayResults(results) {
+            const container = document.getElementById('resultsContainer');
+            
+            if (results.length === 0) {
+                container.innerHTML = `
+                    <div class="section">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🚫</div>
+                            <p>No results found</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = results.map((topicResult, idx) => `
+                <div class="topic-results">
+                    <div class="topic-header">
+                        <div class="topic-title">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                            </svg>
+                            ${topicResult.topic}
+                        </div>
+                        <div style="color: #666; font-size: 0.95em;">
+                            Top ${topicResult.videos.length} videos from last 7 days, sorted by views
+                        </div>
+                    </div>
+                    
+                    <div>
+                        ${topicResult.videos.length > 0 ? topicResult.videos.map((video, i) => `
+                            <div class="video-item">
+                                <div class="video-content">
+                                    <a href="https://youtube.com/watch?v=${video.videoId}" target="_blank">
+                                        <img src="${video.thumbnailUrl}" alt="${video.title}" class="video-thumbnail">
+                                    </a>
+                                    
+                                    <div class="video-details">
+                                        <div class="video-title">
+                                            ${i + 1}. ${video.title}
+                                        </div>
+                                        <div class="video-meta">
+                                            📺 ${video.channelTitle} • 📅 ${new Date(video.publishedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </div>
+                                        <div class="video-stats">
+                                            👁️ ${formatViews(video.views)} views
+                                        </div>
+                                    </div>
+                                    
+                                    <a href="https://youtube.com/watch?v=${video.videoId}" target="_blank" class="watch-btn">
+                                        Watch ▶
+                                    </a>
+                                </div>
+                            </div>
+                        `).join('') : `
+                            <div style="padding: 20px; background: white; border-radius: 8px; text-align: center; color: #999;">
+                                No videos found for this topic in the last 7 days
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

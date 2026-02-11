@@ -5,7 +5,7 @@ import { DB } from './db';
 import { fetchTrends, generateTrendId, extractKeywords } from './trends';
 import { generateEmbedding, cosineSimilarity } from './embeddings';
 import { Trend, Video, LLMEvaluation, Recommendation, TrendRecommendations } from './types';
-import { getYouTubeTitleSuggestions } from './youtube';
+import { getYouTubeTitleSuggestions, getYouTubeTitleSuggestionsForShorts } from './youtube';
 import { ingestVideos } from './ingest';
 import OpenAI from 'openai';
 
@@ -198,6 +198,39 @@ app.post('/api/add-manual-trend', (req, res) => {
     db.close();
     
     res.json({ success: true, trend });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// API: Find top YouTube titles by topics (for shorts feature)
+app.post('/api/find-titles', async (req, res) => {
+  try {
+    const { topics } = req.body;
+    
+    if (!topics || !Array.isArray(topics) || topics.length === 0) {
+      return res.status(400).json({ success: false, error: 'Please provide at least one topic' });
+    }
+    
+    const youtubeApiKey = process.env.YOUTUBE_API_KEY;
+    if (!youtubeApiKey || youtubeApiKey === 'your_youtube_api_key_here') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'YouTube API key not configured. Please add YOUTUBE_API_KEY to your .env file.' 
+      });
+    }
+    
+    const results = [];
+    
+    for (const topic of topics) {
+      const videos = await getYouTubeTitleSuggestionsForShorts(topic, youtubeApiKey, 20, 7);
+      results.push({
+        topic,
+        videos
+      });
+    }
+    
+    res.json({ success: true, results });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
