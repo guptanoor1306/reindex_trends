@@ -335,20 +335,20 @@
         </header>
         
         <!-- Step 1: Fetch Trends -->
-        <div class="section">
-            <div class="collapsible-section" onclick="toggleSection('fetchSection')">
-                <span class="chevron" id="fetchSectionChevron">▶</span>
-                <h2 style="margin: 0;"><span class="step-number">1</span> Fetch Trending Topics</h2>
-            </div>
-            <div class="collapsible-content" id="fetchSection">
-                <p style="margin: 15px 0;">Fetch the latest trending topics from Google News India (All Categories)</p>
-                <button id="fetchTrendsBtn" onclick="fetchTrends()">🔄 Fetch Trends</button>
-                <div id="fetchStatus"></div>
-                
-                <!-- Manual Trend Input -->
-                <div style="margin-top: 30px; padding-top: 25px; border-top: 2px dashed #e0e0e0;">
-                    <h3 style="margin-bottom: 15px; color: #764ba2; font-size: 1.1em;">✍️ Or Add a Manual Trend</h3>
-                    <p style="margin-bottom: 15px; color: #666; font-size: 0.95em;">Know something trending that News didn't catch? Add it manually.</p>
+        <div class="section" id="fetchTrendsSection">
+            <h2><span class="step-number">1</span> Fetch Trending Topics</h2>
+            <p style="margin-bottom: 15px;">Fetch the latest trending topics from Google News India (All Categories)</p>
+            <button id="fetchTrendsBtn" onclick="fetchTrends()">🔄 Fetch Trends</button>
+            <div id="fetchStatus"></div>
+            
+            <!-- Manual Trend Input - Collapsible -->
+            <div style="margin-top: 30px; padding-top: 25px; border-top: 2px dashed #e0e0e0;">
+                <div class="collapsible-section" onclick="toggleSection('manualTrendSection')">
+                    <span class="chevron" id="manualTrendSectionChevron">▶</span>
+                    <h3 style="margin: 0 0 0 0; color: #764ba2; font-size: 1.1em;">✍️ Or Add a Manual Trend</h3>
+                </div>
+                <div class="collapsible-content" id="manualTrendSection">
+                    <p style="margin: 15px 0 15px 0; color: #666; font-size: 0.95em;">Know something trending that News didn't catch? Add it manually.</p>
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         <div>
                             <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #555;">Trend Title <span style="color: red;">*</span></label>
@@ -370,24 +370,19 @@
         </div>
         
         <!-- Step 2: Select Trends -->
-        <div class="section">
-            <div class="collapsible-section" onclick="toggleSection('selectSection')">
-                <span class="chevron" id="selectSectionChevron">▶</span>
-                <h2 style="margin: 0;"><span class="step-number">2</span> Select Relevant Trends</h2>
-            </div>
-            <div class="collapsible-content" id="selectSection">
-                <p style="margin: 15px 0;">Choose which trends are relevant for your channel</p>
-                <div id="trendsContainer">
+        <div class="section" id="selectTrendsSection">
+            <h2><span class="step-number">2</span> Select Relevant Trends</h2>
+            <p style="margin-bottom: 15px;">Choose which trends are relevant for your channel</p>
+            <div id="trendsContainer">
                 <div class="empty-state">
                     <div class="empty-state-icon">📋</div>
                     <p>No trends fetched yet. Click "Fetch Trends" above to begin.</p>
                 </div>
-                </div>
-                <div class="action-buttons" id="trendActions" style="display: none;">
-                    <button onclick="selectAll()">✓ Select All</button>
-                    <button class="btn-secondary" onclick="deselectAll()">✗ Deselect All</button>
-                    <button onclick="matchSelected()" id="matchBtn" style="margin-left: auto;">▶️ Match Selected Trends</button>
-                </div>
+            </div>
+            <div class="action-buttons" id="trendActions" style="display: none;">
+                <button onclick="selectAll()">✓ Select All</button>
+                <button class="btn-secondary" onclick="deselectAll()">✗ Deselect All</button>
+                <button onclick="matchSelected()" id="matchBtn" style="margin-left: auto;">▶️ Match Selected Trends</button>
             </div>
         </div>
         
@@ -501,6 +496,12 @@
         function displayTrends() {
             const container = document.getElementById('trendsContainer');
             const actions = document.getElementById('trendActions');
+            const selectTrendsSection = document.getElementById('selectTrendsSection');
+            
+            // Show the section when trends are displayed
+            if (selectTrendsSection) {
+                selectTrendsSection.style.display = 'block';
+            }
             
             if (trends.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No trends available</p></div>';
@@ -569,6 +570,12 @@
             const resultsSection = document.getElementById('resultsSection');
             const resultsContainer = document.getElementById('resultsContainer');
             const statsContainer = document.getElementById('statsContainer');
+            const selectTrendsSection = document.getElementById('selectTrendsSection');
+            
+            // Collapse the select trends section when matching starts
+            if (selectTrendsSection) {
+                selectTrendsSection.style.display = 'none';
+            }
             
             btn.disabled = true;
             resultsSection.style.display = 'block';
