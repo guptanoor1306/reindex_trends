@@ -761,10 +761,8 @@
                                         <strong>${i + 1}. ${result.video}</strong>
                                     </div>
                                     <div class="score-badges">
-                                        <span class="badge badge-success">Rel: ${(result.scores.semantic_relevance * 100).toFixed(0)}%</span>
-                                        <span class="badge badge-success">Intro: ${(result.scores.intro_support * 100).toFixed(0)}%</span>
-                                        <span class="badge ${result.scores.honesty_risk < 0.3 ? 'badge-success' : 'badge-warning'}">
-                                            Risk: ${(result.scores.honesty_risk * 100).toFixed(0)}%
+                                        <span class="badge badge-success" style="font-size: 1em; padding: 8px 16px;">
+                                            🎯 Vector Match: ${(result.vector_similarity * 100).toFixed(1)}%
                                         </span>
                                     </div>
                                 </div>

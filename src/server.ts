@@ -354,6 +354,7 @@ app.post('/api/match-selected', async (req, res) => {
             trend: trend.title,
             video: candidate.video.title_current,
             video_intro: candidate.video.transcript_intro,
+            vector_similarity: candidate.avgSimilarity, // Add the actual vector match score
             scores: {
               semantic_relevance: evaluation.semantic_relevance,
               intro_support: evaluation.intro_support,
