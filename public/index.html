@@ -663,7 +663,11 @@
                 </div>
             `;
             
-            if (results.length === 0 || results.every(tr => tr.matchedVideos.length === 0)) {
+            const hasAnyContent = results.some(tr => 
+                (tr.matchedVideos && tr.matchedVideos.length > 0) || 
+                (tr.youtubeSuggestions && tr.youtubeSuggestions.length > 0)
+            );
+            if (results.length === 0 || !hasAnyContent) {
                 resultsContainer.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">🚫</div>

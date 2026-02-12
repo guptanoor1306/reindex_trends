@@ -1,6 +1,7 @@
 import express from 'express';
 import * as path from 'path';
 import * as dotenv from 'dotenv';
+import { jsonrepair } from 'jsonrepair';
 import { DB } from './db';
 import { fetchTrends, generateTrendId, extractKeywords } from './trends';
 import { generateEmbedding, cosineSimilarity } from './embeddings';
@@ -672,10 +673,26 @@ IMPORTANT: Keep titles and notes concise. Avoid quotes within strings.`;
       
       try {
         evaluation = JSON.parse(fixedContent) as LLMEvaluation;
-        console.log('✅ Successfully parsed JSON after cleanup');
-      } catch (secondError: any) {
-        console.error('❌ Still failed to parse after cleanup:', secondError.message);
-        throw new Error(`JSON parsing failed: ${parseError.message}`);
+        console.log('✅ Successfully parsed JSON after brace cleanup');
+      } catch (_secondError: any) {
+        // Try jsonrepair for unterminated strings, truncated JSON, etc.
+        try {
+          fixedContent = jsonrepair(content);
+          evaluation = JSON.parse(fixedContent) as LLMEvaluation;
+          console.log('✅ Successfully parsed JSON after jsonrepair');
+        } catch (_thirdError: any) {
+          console.error('❌ All JSON repair attempts failed - rejecting this candidate');
+          // Return rejection instead of throwing - don't break entire match flow
+          return {
+            semantic_relevance: 0,
+            intro_support: 0,
+            honesty_risk: 1.0,
+            allowed: false,
+            titles: [],
+            thumbnails: [],
+            notes: `JSON parse failed: ${parseError.message}`
+          };
+        }
       }
     }
     

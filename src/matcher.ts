@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { jsonrepair } from 'jsonrepair';
 import { DB } from './db';
 import { generateEmbedding, cosineSimilarity } from './embeddings';
 import { Trend, Video, LLMEvaluation, Recommendation, RecommendationOutput } from './types';
@@ -290,10 +291,24 @@ OUTPUT JSON ONLY:
       
       try {
         evaluation = JSON.parse(fixedContent) as LLMEvaluation;
-        console.log('       ✅ Successfully parsed JSON after cleanup');
-      } catch (secondError: any) {
-        console.error('       ❌ Still failed to parse after cleanup:', secondError.message);
-        throw new Error(`JSON parsing failed: ${parseError.message}`);
+        console.log('       ✅ Successfully parsed JSON after brace cleanup');
+      } catch (_secondError: any) {
+        try {
+          fixedContent = jsonrepair(content);
+          evaluation = JSON.parse(fixedContent) as LLMEvaluation;
+          console.log('       ✅ Successfully parsed JSON after jsonrepair');
+        } catch (_thirdError: any) {
+          console.error('       ❌ All JSON repair attempts failed - rejecting this candidate');
+          return {
+            semantic_relevance: 0,
+            intro_support: 0,
+            honesty_risk: 1.0,
+            allowed: false,
+            titles: [],
+            thumbnails: [],
+            notes: `JSON parse failed: ${parseError.message}`
+          };
+        }
       }
     }
     
