@@ -595,17 +595,27 @@
                 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
+                let buffer = ''; // Buffer for incomplete messages
                 
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
                     
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n');
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    
+                    // Keep the last line in buffer if it's incomplete
+                    buffer = lines.pop() || '';
                     
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
-                            const data = JSON.parse(line.substring(6));
+                            let data;
+                            try {
+                                data = JSON.parse(line.substring(6));
+                            } catch (parseError) {
+                                console.error('SSE parse error:', parseError, 'Line:', line.substring(0, 100));
+                                continue; // Skip malformed messages
+                            }
                             
                             if (data.type === 'start') {
                                 streamingLog.innerHTML += `<div style="color: #667eea; font-weight: bold; margin-bottom: 10px;">${data.message}</div>`;
