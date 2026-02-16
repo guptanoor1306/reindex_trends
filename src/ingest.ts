@@ -30,8 +30,8 @@ export async function ingestVideos(inputPath: string, forceReprocess: boolean = 
       transcript_intro: '', // Will be generated
       published_at: rec.published_at || new Date().toISOString(),
       url: rec.url || '',
-      content_type: rec.content_type === 'short' ? 'SF' : 'LF'
-    })).filter((v: Video) => v.video_id && v.transcript_full); // Filter out invalid rows
+      content_type: (rec.content_type === 'short' ? 'SF' : 'LF') as 'LF' | 'SF'
+    })).filter((v: any) => v.video_id && v.transcript_full) as Video[]; // Filter out invalid rows
   } else {
     videos = JSON.parse(rawData) as Video[];
   }
