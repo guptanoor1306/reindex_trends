@@ -84,51 +84,40 @@ app.get('/api/test-youtube', async (req, res) => {
   }
 });
 
-// API: Run ingestion (one-time setup for Railway)
+// API: Run ingestion (supports CSV files for LF and SF)
 app.post('/api/run-ingestion', async (req, res) => {
   try {
     // Simple protection - require a secret key
-    const { secret } = req.body;
+    const { secret, file, force } = req.body;
     const expectedSecret = process.env.INGESTION_SECRET || 'ingestion-secret-2026';
     
     if (secret !== expectedSecret) {
       return res.status(403).json({ 
         success: false, 
-        error: 'Invalid secret. Set INGESTION_SECRET env var or use default.' 
+        error: 'Invalid secret. Use: ingestion-secret-2026' 
       });
     }
 
-    // Check if database already has videos
-    const db = new DB();
-    const existingVideos = db.getAllVideos();
-    db.close();
-
-    if (existingVideos.length > 0) {
-      return res.json({ 
-        success: true, 
-        message: `Database already has ${existingVideos.length} videos. Ingestion not needed.`,
-        videosCount: existingVideos.length
-      });
-    }
-
-    // Run ingestion
-    console.log('🚀 Starting ingestion via API endpoint...');
-    const videoPath = path.join(__dirname, '..', 'data', 'videos.json');
+    const filePath = file || './data/videos.json';
+    const forceReprocess = force === true;
     
-    // Run ingestion in background and respond immediately
+    console.log(`🚀 Starting ingestion: ${filePath} (force: ${forceReprocess})`);
+    
+    // Respond immediately since ingestion takes time
     res.json({ 
       success: true, 
-      message: 'Ingestion started. Check server logs for progress. This will take several minutes.',
-      note: 'Refresh /api/check-db to see progress.'
+      message: `Ingestion started for ${filePath}`,
+      file: filePath,
+      force: forceReprocess,
+      note: 'Check server logs or /api/check-db for progress. This takes several minutes...'
     });
 
-    // Run ingestion (this will take time)
-    await ingestVideos(videoPath, false);
-    console.log('✅ Ingestion completed via API endpoint');
+    // Run ingestion (this will take time - generates embeddings)
+    await ingestVideos(filePath, forceReprocess);
+    console.log(`✅ Ingestion completed: ${filePath}`);
 
   } catch (error: any) {
     console.error('❌ Ingestion error:', error);
-    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -138,11 +127,18 @@ app.get('/api/check-db', (req, res) => {
     const db = new DB();
     const videos = db.getAllVideos();
     const chunks = db.db.prepare('SELECT COUNT(*) as count FROM video_chunks').get() as { count: number };
+    
+    // Count by content type
+    const lfCount = videos.filter(v => v.content_type === 'LF').length;
+    const sfCount = videos.filter(v => v.content_type === 'SF').length;
+    
     db.close();
 
     res.json({
       success: true,
       videosCount: videos.length,
+      longFormCount: lfCount,
+      shortsCount: sfCount,
       chunksCount: chunks.count,
       status: videos.length > 0 ? 'ready' : 'empty'
     });

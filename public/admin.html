@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Data Ingestion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .section {
+            background: white;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section h2 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .stat-card {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔧 Admin Panel</h1>
+            <p>Data Ingestion & Database Management</p>
+        </header>
+        
+        <!-- Database Status -->
+        <div class="section">
+            <h2>📊 Database Status</h2>
+            <div class="grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalVideos">-</div>
+                    <div class="stat-label">Total Videos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="lfCount">-</div>
+                    <div class="stat-label">Long-form (LF)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="sfCount">-</div>
+                    <div class="stat-label">Shorts (SF)</div>
+                </div>
+            </div>
+            <button onclick="checkDatabase()">🔄 Refresh Status</button>
+        </div>
+        
+        <!-- Secret Key Input -->
+        <div class="section">
+            <h2>🔑 Authentication</h2>
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;">Secret Key:</label>
+            <input type="password" id="secretKey" placeholder="Enter ingestion secret (default: ingestion-secret-2026)">
+        </div>
+        
+        <!-- Ingestion Actions -->
+        <div class="section">
+            <h2>📥 Run Ingestion</h2>
+            <div class="warning">
+                <strong>⚠️ Important:</strong> Ingestion generates OpenAI embeddings which costs credits (~$0.0001 per 1K tokens).
+                It also takes several minutes to complete. Check server logs for progress.
+            </div>
+            
+            <h3 style="margin: 20px 0 15px 0;">Quick Actions:</h3>
+            <button onclick="ingestFile('zero1-by-zerodha-lifetime.csv')">🎬 Ingest Long-form Videos</button>
+            <button onclick="ingestFile('zero1-shorts_only.csv')">⚡ Ingest Shorts</button>
+            <button onclick="ingestFile('./data/videos.json')">📄 Ingest from JSON</button>
+            
+            <h3 style="margin: 30px 0 15px 0;">Custom File:</h3>
+            <input type="text" id="customFile" placeholder="e.g., zero1-shorts_only.csv">
+            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
+                <input type="checkbox" id="forceFlag">
+                <span>Force re-process all videos (overwrite existing)</span>
+            </label>
+            <button onclick="ingestCustomFile()">▶️ Run Custom Ingestion</button>
+            
+            <div id="ingestionStatus" class="status"></div>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="section">
+            <h2>📖 Instructions</h2>
+            <ol style="margin-left: 20px; line-height: 2;">
+                <li>Enter your secret key (default: <code>ingestion-secret-2026</code>)</li>
+                <li>Click a quick action button to ingest LF or SF videos</li>
+                <li>Wait several minutes for completion (generates embeddings)</li>
+                <li>Refresh database status to see updated counts</li>
+                <li>Check Railway logs for detailed progress</li>
+            </ol>
+            
+            <h3 style="margin-top: 25px;">Available CSV Files:</h3>
+            <ul style="margin-left: 20px; line-height: 2;">
+                <li><code>zero1-by-zerodha-lifetime.csv</code> - Long-form videos</li>
+                <li><code>zero1-shorts_only.csv</code> - Short-form content</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Check database status on load
+        window.onload = () => {
+            checkDatabase();
+        };
+        
+        async function checkDatabase() {
+            try {
+                const response = await fetch('/api/check-db');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('totalVideos').textContent = data.videosCount;
+                    document.getElementById('lfCount').textContent = data.longFormCount || 0;
+                    document.getElementById('sfCount').textContent = data.shortsCount || 0;
+                }
+            } catch (error) {
+                console.error('Error checking database:', error);
+            }
+        }
+        
+        async function ingestFile(file) {
+            const secret = document.getElementById('secretKey').value || 'ingestion-secret-2026';
+            const status = document.getElementById('ingestionStatus');
+            
+            status.style.display = 'block';
+            status.className = 'status info';
+            status.textContent = `🚀 Starting ingestion for ${file}... Please wait...`;
+            
+            try {
+                const response = await fetch('/api/run-ingestion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        secret, 
+                        file,
+                        force: false 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    status.className = 'status success';
+                    status.innerHTML = `
+                        <strong>✅ Ingestion Started!</strong><br>
+                        File: ${data.file}<br>
+                        ${data.note}<br><br>
+                        Check Railway logs for progress. This will take several minutes...
+                    `;
+                    
+                    // Refresh status after 10 seconds
+                    setTimeout(() => {
+                        checkDatabase();
+                    }, 10000);
+                } else {
+                    status.className = 'status error';
+                    status.textContent = `❌ Error: ${data.error}`;
+                }
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+        
+        function ingestCustomFile() {
+            const file = document.getElementById('customFile').value;
+            if (!file) {
+                alert('Please enter a file path');
+                return;
+            }
+            ingestFile(file);
+        }
+    </script>
+</body>
+</html>
