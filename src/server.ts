@@ -240,7 +240,7 @@ app.post('/api/find-titles', async (req, res) => {
 // API: Match selected trends with SSE streaming
 app.post('/api/match-selected', async (req, res) => {
   try {
-    const { trendIds } = req.body;
+    const { trendIds, contentTypes } = req.body;
     
     if (!trendIds || trendIds.length === 0) {
       return res.status(400).json({ success: false, error: 'No trends selected' });
@@ -256,7 +256,8 @@ app.post('/api/match-selected', async (req, res) => {
     };
 
     const db = new DB();
-    const allVideos = db.getAllVideos();
+    // Filter videos by content type if specified
+    const allVideos = db.getAllVideos(contentTypes && contentTypes.length > 0 ? contentTypes : undefined);
     
     let totalEvaluations = 0;
     let acceptedCount = 0;
@@ -354,6 +355,8 @@ app.post('/api/match-selected', async (req, res) => {
             trend: trend.title,
             video: candidate.video.title_current,
             video_intro: candidate.video.transcript_intro,
+            video_published_at: candidate.video.published_at,
+            video_content_type: candidate.video.content_type || 'LF',
             vector_similarity: candidate.avgSimilarity, // Add the actual vector match score
             scores: {
               semantic_relevance: evaluation.semantic_relevance,

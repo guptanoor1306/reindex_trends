@@ -5,6 +5,7 @@ export interface Video {
   transcript_intro: string;
   published_at: string;
   url?: string;
+  content_type?: 'LF' | 'SF'; // Long-form or Short-form
 }
 
 export interface VideoChunk {

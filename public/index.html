@@ -379,6 +379,22 @@
                     <p>No trends fetched yet. Click "Fetch Trends" above to begin.</p>
                 </div>
             </div>
+            
+            <!-- Content Type Selection -->
+            <div id="contentTypeSelection" style="display: none; margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+                <strong style="display: block; margin-bottom: 10px; color: #667eea;">📹 Select Content Type to Match:</strong>
+                <div style="display: flex; gap: 20px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="contentTypeLF" checked onchange="updateContentTypes()">
+                        <span>🎬 Long-form (LF)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="contentTypeSF" checked onchange="updateContentTypes()">
+                        <span>⚡ Shorts (SF)</span>
+                    </label>
+                </div>
+            </div>
+            
             <div class="action-buttons" id="trendActions" style="display: none;">
                 <button onclick="selectAll()">✓ Select All</button>
                 <button class="btn-secondary" onclick="deselectAll()">✗ Deselect All</button>
@@ -397,6 +413,18 @@
     <script>
         let trends = [];
         let selectedTrendIds = new Set();
+        let selectedContentTypes = ['LF', 'SF']; // Both selected by default
+        
+        // Update selected content types
+        function updateContentTypes() {
+            selectedContentTypes = [];
+            if (document.getElementById('contentTypeLF').checked) {
+                selectedContentTypes.push('LF');
+            }
+            if (document.getElementById('contentTypeSF').checked) {
+                selectedContentTypes.push('SF');
+            }
+        }
         
         // Toggle collapsible sections
         function toggleSection(sectionId) {
@@ -496,6 +524,7 @@
         function displayTrends() {
             const container = document.getElementById('trendsContainer');
             const actions = document.getElementById('trendActions');
+            const contentTypeSelection = document.getElementById('contentTypeSelection');
             const selectTrendsSection = document.getElementById('selectTrendsSection');
             
             // Show the section when trends are displayed
@@ -506,6 +535,7 @@
             if (trends.length === 0) {
                 container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No trends available</p></div>';
                 actions.style.display = 'none';
+                contentTypeSelection.style.display = 'none';
                 return;
             }
             
@@ -523,6 +553,7 @@
             `).join('') + '</div>';
             
             actions.style.display = 'flex';
+            contentTypeSelection.style.display = 'block';
         }
         
         function toggleTrend(trendId) {
@@ -566,6 +597,11 @@
                 return;
             }
             
+            if (selectedContentTypes.length === 0) {
+                alert('Please select at least one content type (LF or SF)');
+                return;
+            }
+            
             const btn = document.getElementById('matchBtn');
             const resultsSection = document.getElementById('resultsSection');
             const resultsContainer = document.getElementById('resultsContainer');
@@ -590,7 +626,10 @@
                 const response = await fetch('/api/match-selected', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ trendIds: Array.from(selectedTrendIds) })
+                    body: JSON.stringify({ 
+                        trendIds: Array.from(selectedTrendIds),
+                        contentTypes: selectedContentTypes
+                    })
                 });
                 
                 const reader = response.body.getReader();
@@ -759,9 +798,19 @@
                                 <div class="result-header">
                                     <div>
                                         <strong>${i + 1}. ${result.video}</strong>
+                                        <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center;">
+                                            <span class="badge" style="background: ${result.video_content_type === 'SF' ? '#FF6B6B' : '#4ECDC4'}; color: white; font-size: 0.75em;">
+                                                ${result.video_content_type === 'SF' ? '⚡ SHORT' : '🎬 LONG-FORM'}
+                                            </span>
+                                            ${result.video_published_at ? `
+                                                <span style="font-size: 0.85em; color: #888;">
+                                                    📅 ${new Date(result.video_published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                </span>
+                                            ` : ''}
+                                        </div>
                                     </div>
                                     <div class="score-badges">
-                                        <span class="badge badge-success" style="font-size: 1em; padding: 8px 16px;">
+                                         <span class="badge badge-success" style="font-size: 1em; padding: 8px 16px;">
                                             🎯 Vector Match: ${(result.vector_similarity * 100).toFixed(1)}%
                                         </span>
                                     </div>

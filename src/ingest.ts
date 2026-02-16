@@ -7,11 +7,47 @@ const CHUNK_SIZE = 1000;
 const CHUNK_OVERLAP = 150;
 const INTRO_WORDS = 200; // First 200 words as intro
 
+// Helper function to parse CSV
+function parseCSV(csvContent: string): any[] {
+  const lines = csvContent.split('\n').filter(line => line.trim());
+  if (lines.length === 0) return [];
+  
+  const headers = lines[0].split(',');
+  const records = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',');
+    const record: any = {};
+    headers.forEach((header, index) => {
+      record[header.trim()] = values[index]?.trim() || '';
+    });
+    records.push(record);
+  }
+  
+  return records;
+}
+
 export async function ingestVideos(inputPath: string, forceReprocess: boolean = false) {
   console.log(`📥 Loading videos from ${inputPath}...`);
   
   const rawData = fs.readFileSync(inputPath, 'utf-8');
-  const videos = JSON.parse(rawData) as Video[];
+  
+  // Determine if input is JSON or CSV
+  let videos: Video[];
+  if (inputPath.endsWith('.csv')) {
+    const records = parseCSV(rawData);
+    videos = records.map(rec => ({
+      video_id: rec.video_id,
+      title_current: rec.title,
+      transcript_full: rec.transcript,
+      transcript_intro: '', // Will be generated
+      published_at: rec.published_at,
+      url: rec.url,
+      content_type: rec.content_type === 'short' ? 'SF' : 'LF'
+    }));
+  } else {
+    videos = JSON.parse(rawData) as Video[];
+  }
   
   console.log(`Found ${videos.length} videos`);
   

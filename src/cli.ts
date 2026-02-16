@@ -39,13 +39,14 @@ async function main() {
 
     default:
       console.log('Usage:');
-      console.log('  npm run ingest [path/to/videos.json] [--force]  - Ingest videos and generate embeddings');
-      console.log('                                                     (Skips existing videos unless --force is used)');
-      console.log('  npm run trends                                   - Fetch trending topics');
-      console.log('  npm run match                                    - Match trends to videos and generate output');
+      console.log('  npm run ingest [path/to/file.csv|.json] [--force]  - Ingest videos and generate embeddings');
+      console.log('                                                        (Skips existing videos unless --force is used)');
+      console.log('  npm run trends                                      - Fetch trending topics');
+      console.log('  npm run match                                       - Match trends to videos and generate output');
       console.log('\nExample workflow:');
-      console.log('  npm run ingest              # Only process new videos');
-      console.log('  npm run ingest -- --force   # Reprocess all videos');
+      console.log('  npm run ingest zero1-by-zerodha-lifetime.csv       # Ingest LF (long-form)');
+      console.log('  npm run ingest zero1-shorts_only.csv               # Ingest SF (short-form)');
+      console.log('  npm run ingest -- --force                          # Reprocess all videos');
       console.log('  npm run trends');
       console.log('  npm run match');
       process.exit(1);

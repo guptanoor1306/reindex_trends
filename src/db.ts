@@ -30,7 +30,8 @@ export class DB {
         transcript_full TEXT NOT NULL,
         transcript_intro TEXT NOT NULL,
         published_at TEXT NOT NULL,
-        url TEXT NOT NULL
+        url TEXT NOT NULL,
+        content_type TEXT DEFAULT 'LF'
       );
 
       CREATE TABLE IF NOT EXISTS video_chunks (
@@ -68,13 +69,24 @@ export class DB {
         FOREIGN KEY (video_id) REFERENCES videos(video_id)
       );
     `);
+    
+    // Migration: Add content_type column if it doesn't exist
+    try {
+      this.db.exec(`ALTER TABLE videos ADD COLUMN content_type TEXT DEFAULT 'LF'`);
+      console.log('✅ Migration: Added content_type column');
+    } catch (e: any) {
+      // Column already exists, ignore error
+      if (!e.message.includes('duplicate column')) {
+        console.error('Migration error:', e.message);
+      }
+    }
   }
 
   insertVideo(video: Video) {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO videos 
-      (video_id, title_current, transcript_full, transcript_intro, published_at, url)
-      VALUES (?, ?, ?, ?, ?, ?)
+      (video_id, title_current, transcript_full, transcript_intro, published_at, url, content_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       video.video_id,
@@ -82,7 +94,8 @@ export class DB {
       video.transcript_full,
       video.transcript_intro,
       video.published_at,
-      video.url || ''
+      video.url || '',
+      video.content_type || 'LF'
     );
   }
 
@@ -130,7 +143,12 @@ export class DB {
     );
   }
 
-  getAllVideos(): Video[] {
+  getAllVideos(contentTypes?: ('LF' | 'SF')[]): Video[] {
+    if (contentTypes && contentTypes.length > 0) {
+      const placeholders = contentTypes.map(() => '?').join(',');
+      const stmt = this.db.prepare(`SELECT * FROM videos WHERE content_type IN (${placeholders})`);
+      return stmt.all(...contentTypes) as Video[];
+    }
     const stmt = this.db.prepare('SELECT * FROM videos');
     return stmt.all() as Video[];
   }
