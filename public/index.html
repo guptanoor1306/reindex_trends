@@ -793,7 +793,13 @@
                             📹 Your Matched Videos (Optional Repackaging Ideas)
                         </h3>
                         <p style="margin: 0 0 15px 0; color: #666; font-size: 0.85em;">These are videos from your library that could be repackaged for this trend.</p>
-                        ${trendResult.matchedVideos.map((result, i) => `
+                        ${(() => {
+                            // Group by content type
+                            const lfVideos = trendResult.matchedVideos.filter(v => v.video_content_type === 'LF');
+                            const sfVideos = trendResult.matchedVideos.filter(v => v.video_content_type === 'SF');
+                            
+                            // Function to render a single video
+                            const renderVideo = (result, i) => `
                             <div class="result-item" style="margin-bottom: 20px;">
                                 <div class="result-header">
                                     <div>
@@ -802,11 +808,7 @@
                                             <span class="badge" style="background: ${result.video_content_type === 'SF' ? '#FF6B6B' : '#4ECDC4'}; color: white; font-size: 0.75em;">
                                                 ${result.video_content_type === 'SF' ? '⚡ SHORT' : '🎬 LONG-FORM'}
                                             </span>
-                                            ${result.video_published_at ? `
-                                                <span style="font-size: 0.85em; color: #888;">
-                                                    📅 ${new Date(result.video_published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                </span>
-                                            ` : ''}
+                                            ${result.video_published_at ? '<span style="font-size: 0.85em; color: #888;">📅 ' + new Date(result.video_published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + '</span>' : ''}
                                         </div>
                                     </div>
                                     <div class="score-badges">
@@ -815,21 +817,30 @@
                                         </span>
                                     </div>
                                 </div>
-                                
-                                ${result.video_intro ? `
-                                <div style="margin-top: 15px; padding: 15px; background: #f0f4ff; border-radius: 6px; border-left: 3px solid #667eea;">
-                                    <strong>📺 Video Intro (First 200 words):</strong>
-                                    <div style="margin-top: 8px; color: #555; font-size: 0.9em; line-height: 1.6; max-height: 120px; overflow-y: auto;">
-                                        ${result.video_intro.substring(0, 600)}${result.video_intro.length > 600 ? '...' : ''}
-                                    </div>
-                                </div>
-                                ` : ''}
-                                
+                                ${result.video_intro ? '<div style="margin-top: 15px; padding: 15px; background: #f0f4ff; border-radius: 6px; border-left: 3px solid #667eea;"><strong>📺 Video Intro (First 200 words):</strong><div style="margin-top: 8px; color: #555; font-size: 0.9em; line-height: 1.6; max-height: 120px; overflow-y: auto;">' + result.video_intro.substring(0, 600) + (result.video_intro.length > 600 ? '...' : '') + '</div></div>' : ''}
                                 <div style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 6px;">
                                     <strong>📝 Repackaging Strategy:</strong> ${result.packaging.notes}
                                 </div>
-                            </div>
-                        `).join('')}
+                            </div>`;
+                            
+                            let html = '';
+                            
+                            // Show LF section if exists
+                            if (lfVideos.length > 0) {
+                                html += '<div style="margin-bottom: 30px;"><h4 style="color: #4ECDC4; margin-bottom: 15px; font-size: 1.05em; padding: 10px; background: linear-gradient(135deg, #4ECDC420 0%, #4ECDC410 100%); border-radius: 6px;">🎬 Long-form Videos (Top ' + lfVideos.length + ')</h4>';
+                                html += lfVideos.map((result, i) => renderVideo(result, i)).join('');
+                                html += '</div>';
+                            }
+                            
+                            // Show SF section if exists
+                            if (sfVideos.length > 0) {
+                                html += '<div style="margin-bottom: 20px;"><h4 style="color: #FF6B6B; margin-bottom: 15px; font-size: 1.05em; padding: 10px; background: linear-gradient(135deg, #FF6B6B20 0%, #FF6B6B10 100%); border-radius: 6px;">⚡ Short-form Videos (Top ' + sfVideos.length + ')</h4>';
+                                html += sfVideos.map((result, i) => renderVideo(result, i)).join('');
+                                html += '</div>';
+                            }
+                            
+                            return html;
+                        })()}
                     </div>
                     ` : `
                     <div style="padding: 20px; background: #fff3cd; border-radius: 8px; border: 1px solid #ffc107; color: #856404;">

@@ -309,77 +309,103 @@ app.post('/api/match-selected', async (req, res) => {
         });
       }
 
-      const candidates = await getCandidateVideos(db, trend, allVideos);
+      // When both SF and LF are selected, get top 3 from each separately
+      let candidatesByType: { contentType: string; candidates: any[] }[] = [];
       
-      sendEvent({ 
-        type: 'candidates', 
-        count: candidates.length,
-        message: `  → Found ${candidates.length} candidate videos`
-      });
+      if (contentTypes && contentTypes.length === 2) {
+        // Both selected - get top 3 from each
+        for (const type of contentTypes) {
+          const videosOfType = allVideos.filter(v => v.content_type === type);
+          const typeCandidates = await getCandidateVideos(db, trend, videosOfType);
+          candidatesByType.push({
+            contentType: type,
+            candidates: typeCandidates.slice(0, 3) // Top 3 only
+          });
+        }
+        sendEvent({ 
+          type: 'candidates',
+          message: `  → Found ${candidatesByType.map(g => `${g.candidates.length} ${g.contentType}`).join(', ')} candidates`
+        });
+      } else {
+        // Single type or all - normal flow
+        const candidates = await getCandidateVideos(db, trend, allVideos);
+        candidatesByType.push({
+          contentType: 'ALL',
+          candidates: candidates
+        });
+        sendEvent({ 
+          type: 'candidates', 
+          count: candidates.length,
+          message: `  → Found ${candidates.length} candidate videos`
+        });
+      }
 
       const matchedVideos: any[] = [];
 
-      for (const candidate of candidates) {
-        totalEvaluations++;
+      // Process all candidates from all groups
+      for (const group of candidatesByType) {
+        for (const candidate of group.candidates) {
+          totalEvaluations++;
         
-        const topChunks = candidate.topChunks.slice(0, TOP_CHUNKS_FOR_LLM);
-        const evaluation = await evaluateWithLLM(trend, candidate.video, topChunks);
-        
-        const accepted = 
-          evaluation.allowed &&
-          evaluation.semantic_relevance >= MIN_SEMANTIC_RELEVANCE &&
-          evaluation.intro_support >= MIN_INTRO_SUPPORT &&
-          evaluation.honesty_risk <= MAX_HONESTY_RISK;
-        
-        if (accepted) {
-          acceptedCount++;
+          const topChunks = candidate.topChunks.slice(0, TOP_CHUNKS_FOR_LLM);
+          const evaluation = await evaluateWithLLM(trend, candidate.video, topChunks);
           
-          const recommendation: Recommendation = {
-            trend_id: trend.trend_id,
-            video_id: candidate.video.video_id,
-            semantic_relevance: evaluation.semantic_relevance,
-            intro_support: evaluation.intro_support,
-            honesty_risk: evaluation.honesty_risk,
-            titles: JSON.stringify(evaluation.titles),
-            thumbnails: JSON.stringify(evaluation.thumbnails),
-            notes: evaluation.notes
-          };
+          const accepted = 
+            evaluation.allowed &&
+            evaluation.semantic_relevance >= MIN_SEMANTIC_RELEVANCE &&
+            evaluation.intro_support >= MIN_INTRO_SUPPORT &&
+            evaluation.honesty_risk <= MAX_HONESTY_RISK;
           
-          db.insertRecommendation(recommendation);
-          
-          const result = {
-            trend: trend.title,
-            video: candidate.video.title_current,
-            video_intro: candidate.video.transcript_intro,
-            video_published_at: candidate.video.published_at,
-            video_content_type: candidate.video.content_type || 'LF',
-            vector_similarity: candidate.avgSimilarity, // Add the actual vector match score
-            scores: {
+          if (accepted) {
+            acceptedCount++;
+            
+            const recommendation: Recommendation = {
+              trend_id: trend.trend_id,
+              video_id: candidate.video.video_id,
               semantic_relevance: evaluation.semantic_relevance,
               intro_support: evaluation.intro_support,
-              honesty_risk: evaluation.honesty_risk
-            },
-            packaging: {
-              titles: evaluation.titles,
-              thumbnails: evaluation.thumbnails,
+              honesty_risk: evaluation.honesty_risk,
+              titles: JSON.stringify(evaluation.titles),
+              thumbnails: JSON.stringify(evaluation.thumbnails),
               notes: evaluation.notes
-            }
-          };
-          
-          matchedVideos.push(result);
-          
-          sendEvent({ 
-            type: 'accepted',
-            video: candidate.video.title_current,
-            scores: result.scores,
-            message: `    ✅ ACCEPTED: ${candidate.video.title_current}`
-          });
-        } else {
-          sendEvent({ 
-            type: 'rejected',
-            video: candidate.video.title_current,
-            message: `    ❌ REJECTED: ${candidate.video.title_current}`
-          });
+            };
+            
+            db.insertRecommendation(recommendation);
+            
+            const result = {
+              trend: trend.title,
+              video: candidate.video.title_current,
+              video_intro: candidate.video.transcript_intro,
+              video_published_at: candidate.video.published_at,
+              video_content_type: candidate.video.content_type || 'LF',
+              vector_similarity: candidate.avgSimilarity, // Add the actual vector match score
+              scores: {
+                semantic_relevance: evaluation.semantic_relevance,
+                intro_support: evaluation.intro_support,
+                honesty_risk: evaluation.honesty_risk
+              },
+              packaging: {
+                titles: evaluation.titles,
+                thumbnails: evaluation.thumbnails,
+                notes: evaluation.notes
+              }
+            };
+            
+            matchedVideos.push(result);
+            
+            sendEvent({ 
+              type: 'accepted',
+              video: candidate.video.title_current,
+              scores: result.scores,
+              message: `    ✅ ACCEPTED: ${candidate.video.title_current}`
+            });
+          } else {
+            sendEvent({ 
+              type: 'rejected',
+              video: candidate.video.title_current,
+              message: `    ❌ REJECTED: ${candidate.video.title_current}`
+            });
+          }
         }
       }
 
