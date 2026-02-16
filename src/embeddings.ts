@@ -21,10 +21,17 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 }
 
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
+  // Filter out empty strings to prevent API errors
+  const validTexts = texts.filter(t => t && t.trim().length > 0);
+  
+  if (validTexts.length === 0) {
+    throw new Error('No valid text provided for embeddings');
+  }
+  
   const openai = getOpenAIClient();
   const response = await openai.embeddings.create({
     model: 'text-embedding-3-small',
-    input: texts,
+    input: validTexts,
   });
   return response.data.map(d => d.embedding);
 }
